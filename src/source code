@@ -1,0 +1,122 @@
+const int trigPin = 9;
+const int echoPin = 10;
+const int buzzerPin = 11;
+const int redPin = 6;
+const int greenPin = 5;
+const int bluePin = 4;
+
+const int BATAS_HIJAU_TERUS = 120;
+const int BATAS_HIJAU_MULAI = 60;
+
+float distance;
+unsigned long lastBeepTime = 0;
+
+void setup() {
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+  
+  testStartup();
+}
+
+void loop() {
+  distance = readDistance();
+  
+  float sangatDekat = fuzzyMembership(distance, 0, 10, 25);
+  float dekat = fuzzyMembership(distance, 15, 35, 60);
+  float sedang = fuzzyMembership(distance, 40, 80, 120);
+  float jauh = fuzzyMembership(distance, 100, 150, 200);
+  
+  float merahOutput = sangatDekat * 255;
+  float kuningOutput = dekat * 255;
+  float hijauOutput = 0;
+  
+  if (distance > BATAS_HIJAU_TERUS) {
+    merahOutput = 0;
+    kuningOutput = 0;
+    hijauOutput = 255;
+  } 
+  else if (distance > BATAS_HIJAU_MULAI) {
+    hijauOutput = (sedang * 255) + (jauh * 150);
+  }
+  
+  if (distance <= BATAS_HIJAU_TERUS) {
+    float totalLED = merahOutput + kuningOutput + hijauOutput;
+    if (totalLED > 255) {
+      merahOutput = (merahOutput / totalLED) * 255;
+      kuningOutput = (kuningOutput / totalLED) * 255;
+      hijauOutput = (hijauOutput / totalLED) * 255;
+    }
+  }
+  
+  setColor(merahOutput, kuningOutput, hijauOutput);
+  
+  controlBuzzerLinear(distance);
+  
+  delay(50);
+}
+
+void controlBuzzerLinear(float dist) {
+  unsigned long currentTime = millis();
+  
+  if (dist > 150) {
+    noTone(buzzerPin);
+    return;
+  }
+  
+  int beepInterval = map(dist, 0, 200, 100, 1500);
+  beepInterval = constrain(beepInterval, 100, 1500);
+  
+  int beepDuration = map(dist, 0, 200, 300, 50);
+  beepDuration = constrain(beepDuration, 50, 300);
+  
+  int frequency = map(dist, 0, 200, 2000, 500);
+  frequency = constrain(frequency, 500, 2000);
+  
+  if (currentTime - lastBeepTime >= beepInterval) {
+    lastBeepTime = currentTime;
+    tone(buzzerPin, frequency, beepDuration);
+  }
+}
+
+void testStartup() {
+  setColor(255, 0, 0);
+  delay(300);
+  setColor(255, 255, 0);
+  delay(300);
+  setColor(0, 255, 0);
+  delay(300);
+  setColor(0, 0, 0);
+  
+  tone(buzzerPin, 1000, 200);
+  delay(400);
+}
+
+float fuzzyMembership(float x, float a, float b, float c) {
+  if (x <= a || x >= c) return 0.0;
+  if (x >= a && x <= b) return (x - a) / (b - a);
+  if (x >= b && x <= c) return (c - x) / (c - b);
+  return 0.0;
+}
+
+float readDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  long duration = pulseIn(echoPin, HIGH);
+  float distance = duration * 0.034 / 2;
+  distance = constrain(distance, 0, 200);
+  return distance;
+}
+
+void setColor(int red, int green, int blue) {
+  analogWrite(redPin, red);
+  analogWrite(greenPin, green);
+  analogWrite(bluePin, blue);
+}
