@@ -29,7 +29,7 @@ The system uses four fuzzy membership categories:
 - Medium
 - Far
 
-## 📊 Fuzzy Rules
+## Fuzzy Rules
 
 | No | IF (Distance) | THEN (Output) |
 |---|---|---|
